@@ -12,8 +12,8 @@ module tb_drvAd56x3();
 
     localparam int T = 10;
     
-    localparam SIGN_A = 1'b0;
-    localparam SIGN_B = 1'b0;
+    localparam SIGN_A = "UNSIGNED";
+    localparam SIGN_B = "SIGNED";
     localparam DATA_WIDTH = 14;
     
     localparam SCLK_DIVIDER = 2;
@@ -44,22 +44,25 @@ module tb_drvAd56x3();
        .dataB   (dataB),
        .dacSync (dacSync),
        .dacSclk (dacSclk),
-       .dacDin  (dacDin));
+       .dacDin  (dacDin)); 
     
     // clk
     always begin   
         clk = 1'b1;
-        #( T / 2 );
+        #(T/2);
         clk = 1'b0;
-        #( T / 2 );
+        #(T/2);
     end
    
     // reset
     initial begin   
         reset = 1'b1;
-        #( 10 * T + T / 2 );
+        #(10*T + T/2);
         reset = 1'b0;
     end
+
+    localparam XOR_A = (SIGN_A == "SIGNED") ? 1'b1 : 1'b0;
+    localparam XOR_B = (SIGN_B == "SIGNED") ? 1'b1 : 1'b0;
     
     localparam SHIFT_WIDTH = 24;
     
@@ -76,21 +79,20 @@ module tb_drvAd56x3();
         expectedA = {2'b00,
                      uut.COMMAND_WORD_A,
                      uut.ADDRESS_WORD_A,
-                     SIGN_A ^ dataA[$left(dataA)],
+                     XOR_A ^ dataA[$left(dataA)],
                      dataA[$left(dataA)-1 : 0],
                      {16 - DATA_WIDTH{1'b0}}};                        
         expectedB = {2'b00,
                      uut.COMMAND_WORD_B,
                      uut.ADDRESS_WORD_B,
-                     SIGN_B ^ dataB[$left(dataB)],
+                     XOR_B ^ dataB[$left(dataB)],
                      dataB[$left(dataB)-1 : 0],
                      {16 - DATA_WIDTH{1'b0}}};                              
         ce = 1'b1;
         #(T);
         ce = 1'b0;
-        dataA <= 'x;
-        dataB <= 'x;        
-        
+        dataA = 'x;
+        dataB = 'x;                
     end    
     
     // extract data from dacDin
