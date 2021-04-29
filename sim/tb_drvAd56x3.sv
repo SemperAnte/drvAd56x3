@@ -9,16 +9,17 @@
 `timescale 1 ns / 100 ps
 
 module tb_drvAd56x3();
-
-    localparam int T = 10;
-    
+  
     localparam SIGN_A = "UNSIGNED";
     localparam SIGN_B = "SIGNED";
     localparam DATA_WIDTH = 14;
     
     localparam SCLK_DIVIDER = 2;
     localparam SYNC_DURATION = 5;
-   
+    localparam SHIFT_WIDTH = 24;
+
+    localparam time T = 1e9 / 2e5 / (SCLK_DIVIDER * (SHIFT_WIDTH * 2 + SYNC_DURATION + 1));    // For sample rate 200 KHz 
+    
     logic clk;
     logic reset;
     logic ce;
@@ -63,9 +64,7 @@ module tb_drvAd56x3();
 
     localparam XOR_A = (SIGN_A == "SIGNED") ? 1'b1 : 1'b0;
     localparam XOR_B = (SIGN_B == "SIGNED") ? 1'b1 : 1'b0;
-    
-    localparam SHIFT_WIDTH = 24;
-    
+   
     logic actualRdy;
     logic [SHIFT_WIDTH-1 : 0] actualA, actualB;
     logic [SHIFT_WIDTH-1 : 0] expectedA, expectedB;   
