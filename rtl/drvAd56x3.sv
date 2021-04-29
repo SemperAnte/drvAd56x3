@@ -13,7 +13,7 @@ module drvAd56x3
                 DATA_WIDTH = 14,        // width of data                
                 SCLK_DIVIDER = 2,       // divide master clk frequency for dacSclk
                 SYNC_DURATION = 5)      // dacSync is high between channels in cycles of dacSclk  
-    (input logic clk,
+    (input logic clk,                       // 25MHz on SOM-CV-SE-A6D-C3C-7I 
      input logic reset,
      input logic ce,                        // latch input data, sampling frequency of dac output
      
