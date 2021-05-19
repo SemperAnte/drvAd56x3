@@ -9,16 +9,21 @@
 `timescale 1 ns / 100 ps
 
 module tb_drvAd56x3();
-  
+     
     localparam SIGN_A = "UNSIGNED";
     localparam SIGN_B = "SIGNED";
     localparam DATA_WIDTH = 14;
     
     localparam SCLK_DIVIDER = 2;
     localparam SYNC_DURATION = 5;
-    localparam SHIFT_WIDTH = 24;
-
-    localparam time T = 1e9 / 2e5 / (SCLK_DIVIDER * (SHIFT_WIDTH * 2 + SYNC_DURATION + 1));    // For sample rate 200 KHz 
+    localparam SHIFT_WIDTH = 24;   
+    
+    // for 25 MHz clk
+    localparam time T_CLK = 1s / 25.0e6; 
+    // ce minimum period to complete conversion in time
+    localparam time T_CE_MIN = SCLK_DIVIDER * (SHIFT_WIDTH * 2 + SYNC_DURATION + 1) * T_CLK;
+    // for 200 kHz
+    localparam time T_CE = 1s / 200.0e3;
     
     logic clk;
     logic reset;
@@ -50,15 +55,15 @@ module tb_drvAd56x3();
     // clk
     always begin   
         clk = 1'b1;
-        #(T/2);
+        #(T_CLK/2);
         clk = 1'b0;
-        #(T/2);
+        #(T_CLK/2);
     end
    
     // reset
     initial begin   
         reset = 1'b1;
-        #(10*T + T/2);
+        #(10*T_CLK + T_CLK/2);
         reset = 1'b0;
     end
 
@@ -72,7 +77,7 @@ module tb_drvAd56x3();
     // input random data
     always begin    
         ce = 1'b0;        
-        #(SCLK_DIVIDER * (SHIFT_WIDTH * 2 + SYNC_DURATION + 1) * T);
+        #(T_CE - T_CLK);
         dataA = $urandom();
         dataB = $urandom();
         expectedA = {2'b00,
@@ -88,7 +93,7 @@ module tb_drvAd56x3();
                      dataB[$left(dataB)-1 : 0],
                      {16 - DATA_WIDTH{1'b0}}};                              
         ce = 1'b1;
-        #(T);
+        #(T_CLK);
         ce = 1'b0;
         dataA = 'x;
         dataB = 'x;                
