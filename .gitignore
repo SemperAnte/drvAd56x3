@@ -17,6 +17,7 @@ matlab
 
 quartus
 !quartus/
+!quartus/.ipx
 !quartus/**/*.qpf
 !quartus/**/*.qsf
 !quartus/**/*.sdc
@@ -30,6 +31,7 @@ quartus
 
 rtl
 !rtl/
+!rtl/**/*.tcl
 !rtl/**/*.sv
 !rtl/**/*.v
 !rtl/**/*.vh
