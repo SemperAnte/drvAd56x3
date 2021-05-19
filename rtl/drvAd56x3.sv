@@ -8,18 +8,21 @@
 // see datasheet
 //--------------------------------------------------------------------------------
 module drvAd56x3    
-   #( parameter SIGN_A = "UNSIGNED",          // 0 for UNSIGNED, 1 for SIGNED data format
-                SIGN_B = "UNSIGNED",                
-                DATA_WIDTH = 14,        // width of data                
-                SCLK_DIVIDER = 2,       // divide master clk frequency for dacSclk
-                SYNC_DURATION = 5)      // dacSync is high between channels in cycles of dacSclk  
-    (input logic clk,                       // 25MHz on SOM-CV-SE-A6D-C3C-7I 
+   #( parameter SIGN_A = "UNSIGNED", // 0 for UNSIGNED, 1 for SIGNED data format
+                SIGN_B = "UNSIGNED",         
+                DATA_WIDTH = 14,     // width of data                
+                SCLK_DIVIDER = 2,    // divide master clk frequency for dacSclk
+                SYNC_DURATION = 5)   // dacSync is high between channels in cycles of dacSclk  
+    (input logic clk,   // 25MHz on SOM-CV-SE-A6D-C3C-7I 
      input logic reset,
-     input logic ce,                        // latch input data, sampling frequency of dac output
      
-     input logic [DATA_WIDTH-1 : 0] dataA,  // data 14 bit, channel A
-     input logic [DATA_WIDTH-1 : 0] dataB,  // data 14 bit, channel B
+     // avalon ST sink
+     input logic                    asiValid,    // sampling frequency of dac output
+     input logic                    asiChannel,  // 0 - for channel A, 1 - for channel B
+     input logic [DATA_WIDTH-1 : 0] asiData,
+     output logic                   asiRdy,
      
+     // conduit to DAC
      output logic dacSync,                  // when sync is low begins write sequence
                                             // sync must be high for min 15 ns between transactions
      output logic dacSclk,                  // dac receives di on falling edge of sclk                                            
@@ -34,7 +37,7 @@ module drvAd56x3
     localparam XOR_A = (SIGN_A == "SIGNED") ? 1'b1 : 1'b0;
     localparam XOR_B = (SIGN_B == "SIGNED") ? 1'b1 : 1'b0;
     
-    localparam SHIFT_WIDTH = 24;      
+    localparam SHIFT_WIDTH = 24;
     logic [SHIFT_WIDTH-1 : 0] shiftReg, shiftAReg, shiftBReg; // shift = {2'bxx, commandWord, addressWord, data, '0}    
     logic [$clog2(SHIFT_WIDTH)-1 : 0] shiftCnt; // counter 0-24
     
@@ -43,6 +46,7 @@ module drvAd56x3
     logic startData;
     logic channel;  // A = 0, B = 1     
     logic [DATA_WIDTH-1 : 0] dataAReg, dataBReg; // latch data on ce   
+    logic dataASet, dataBSet;
     
     // sclk
     logic sclkSync;
@@ -88,13 +92,25 @@ module drvAd56x3
     if (reset) begin
         dataAReg <= '0;
         dataBReg <= '0;
+        dataASet <= 1'b0;
+        dataBSet <= 1'b0;
         startData <= 1'b0;
     end else begin
-        if (ce) begin
-            dataAReg <= dataA;
-            dataBReg <= dataB;
-            startData <= 1'b1;
+        if (asiValid) begin
+            if (~asiChannel) begin
+                dataAReg <= asiData;
+                dataASet <= 1'b1;
+                if (dataBSet)
+                    startData <= 1'b1;
+            end else begin
+                dataBReg <= asiData;
+                dataBSet <= 1'b1;
+                if (dataASet)
+                    startData <= 1'b1;
+            end            
         end else if (sclkSync) begin
+            dataASet  <= 1'b0;
+            dataBSet  <= 1'b0;
             startData <= 1'b0;
         end
     end
@@ -148,6 +164,7 @@ module drvAd56x3
         end
     end
     
+    assign asiRdy = dacSync & ~channel & ~startData;
     assign dacDin = shiftReg[$left(shiftReg)];  
         
 endmodule

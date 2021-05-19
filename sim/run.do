@@ -14,5 +14,5 @@ add wave *
 
 view structure
 view signals
-run 1000 us
+run 100 us
 wave zoomfull

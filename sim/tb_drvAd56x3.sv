@@ -27,10 +27,11 @@ module tb_drvAd56x3();
     
     logic clk;
     logic reset;
-    logic ce;
    
-    logic [DATA_WIDTH-1 : 0] dataA;
-    logic [DATA_WIDTH-1 : 0] dataB;
+    logic                    asiValid;
+    logic                    asiChannel;
+    logic [DATA_WIDTH-1 : 0] asiData;
+    logic                    asiRdy;
     
     logic dacSync;
     logic dacSclk;
@@ -43,14 +44,15 @@ module tb_drvAd56x3();
       .SCLK_DIVIDER(SCLK_DIVIDER),
       .SYNC_DURATION(SYNC_DURATION))
     uut
-      (.clk     (clk),
-       .reset   (reset),
-       .ce      (ce),
-       .dataA   (dataA),
-       .dataB   (dataB),
-       .dacSync (dacSync),
-       .dacSclk (dacSclk),
-       .dacDin  (dacDin)); 
+      (.clk       (clk),
+       .reset     (reset),
+       .asiValid  (asiValid),
+       .asiChannel(asiChannel),
+       .asiData   (asiData),
+       .asiRdy    (asiRdy),
+       .dacSync   (dacSync),
+       .dacSclk   (dacSclk),
+       .dacDin    (dacDin));
     
     // clk
     always begin   
@@ -74,30 +76,52 @@ module tb_drvAd56x3();
     logic [SHIFT_WIDTH-1 : 0] actualA, actualB;
     logic [SHIFT_WIDTH-1 : 0] expectedA, expectedB;   
     
+    enum int unsigned {ST_RDY, ST_A, ST_B} state;
+    
     // input random data
-    always begin    
-        ce = 1'b0;        
-        #(T_CE - T_CLK);
-        dataA = $urandom();
-        dataB = $urandom();
-        expectedA = {2'b00,
-                     uut.COMMAND_WORD_A,
-                     uut.ADDRESS_WORD_A,
-                     XOR_A ^ dataA[$left(dataA)],
-                     dataA[$left(dataA)-1 : 0],
-                     {16 - DATA_WIDTH{1'b0}}};                        
-        expectedB = {2'b00,
-                     uut.COMMAND_WORD_B,
-                     uut.ADDRESS_WORD_B,
-                     XOR_B ^ dataB[$left(dataB)],
-                     dataB[$left(dataB)-1 : 0],
-                     {16 - DATA_WIDTH{1'b0}}};                              
-        ce = 1'b1;
-        #(T_CLK);
-        ce = 1'b0;
-        dataA = 'x;
-        dataB = 'x;                
-    end    
+    always_ff @(posedge clk, posedge reset)
+    if (reset) begin
+        asiValid   <= 1'b0;
+        asiChannel <= 1'b0;
+        asiData    <= 'x;
+        state      <= ST_RDY;
+    end else begin
+        // default
+        asiValid   <= 1'b0;
+        asiChannel <= 1'b0;
+        asiData    <= 'x;
+        case (state)
+            ST_RDY: begin                
+                if (asiRdy) begin
+                    asiValid   <= 1'b1;
+                    asiChannel <= 1'b0;                    
+                    asiData <= $urandom();
+                    state   <= ST_A;
+                end                    
+            end
+            ST_A: begin                
+                asiValid   <= 1'b1;
+                asiChannel <= 1'b1;
+                asiData    <= $urandom();
+                expectedA  <= {2'b00,
+                               uut.COMMAND_WORD_A,
+                               uut.ADDRESS_WORD_A,
+                               XOR_A ^ asiData[$left(asiData)],
+                               asiData[$left(asiData)-1 : 0],
+                               {16 - DATA_WIDTH{1'b0}}};  
+                state      <= ST_B;
+            end
+            ST_B: begin
+                expectedB = {2'b00,
+                             uut.COMMAND_WORD_B,
+                             uut.ADDRESS_WORD_B,
+                             XOR_B ^ asiData[$left(asiData)],
+                             asiData[$left(asiData)-1 : 0],
+                             {16 - DATA_WIDTH{1'b0}}};  
+                state <= ST_RDY;
+            end
+        endcase        
+    end
     
     // extract data from dacDin
     logic [SHIFT_WIDTH-1 : 0] shiftReg, shiftComb;
