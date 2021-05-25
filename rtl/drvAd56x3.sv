@@ -90,13 +90,13 @@ module drvAd56x3
     // latch inputs on ce
     always_ff @(posedge clk, posedge reset)
     if (reset) begin
-        dataAReg <= '0;
-        dataBReg <= '0;
-        dataASet <= 1'b0;
-        dataBSet <= 1'b0;
+        dataAReg  <= '0;
+        dataBReg  <= '0;
+        dataASet  <= 1'b0;
+        dataBSet  <= 1'b0;
         startData <= 1'b0;
     end else begin
-        if (asiValid) begin
+        if (asiValid & asiRdy) begin
             if (~asiChannel) begin
                 dataAReg <= asiData;
                 dataASet <= 1'b1;

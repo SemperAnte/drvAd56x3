@@ -6,7 +6,7 @@
 //--------------------------------------------------------------------------------
 // top-level wrapper for qsys automatic signal recognition
 //--------------------------------------------------------------------------------
-module dacGenerator
+module dacGenerator_hw
    #( parameter SIGN_A = "UNSIGNED",
                 SIGN_B = "UNSIGNED",
                 DATA_WIDTH = 14,
@@ -20,12 +20,13 @@ module dacGenerator
      output logic [DATA_WIDTH-1 : 0] aso_gen_data,
      input  logic                    aso_gen_ready);
      
-    drvAd56x3        
+    dacGenerator        
         #(  .SIGN_A(SIGN_A),          
             .SIGN_B(SIGN_B),                
             .DATA_WIDTH(DATA_WIDTH),
             .INCREASE_RATE(INCREASE_RATE))
-    drvAd56x3_inst
+
+    dacGenerator_inst
          (.clk       (csi_clk),
           .reset     (rsi_reset),
           .asoValid  (aso_gen_valid),

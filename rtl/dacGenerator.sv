@@ -8,39 +8,50 @@
 // with Avalon ST interface for testing purpose
 //--------------------------------------------------------------------------------
 module dacGenerator
-   #( parameter SIGN_A = "UNSIGNED",
-                SIGN_B = "UNSIGNED",
-                DATA_WIDTH = 14,
-                INCREASE_RATE = 1)    
-    (input  logic csi_clk,
-     input  logic rsi_reset,
+   #(parameter CE_DIVIDER = 125, // divider for generator sampling frequency (for clk = 25e6 and ce = 200e3 CE_DIVIDER = 125)
+               DATA_WIDTH = 14,
+               INCREASE_RATE = 1)    
+    (input  logic clk,
+     input  logic reset,
      
-     // avalon ST source
-     input logic                    aso_gen_valid,
-     input logic                    asi_gen_channel,
-     input logic [DATA_WIDTH-1 : 0] asi_gen_data,
-     output logic                   asi_gen_ready);
-     
-     // conduit to DAC
-     output logic coe_dacSync,                                           
-     output logic coe_dacSclk,              
-     output logic coe_dacDin);
-     
-    drvAd56x3        
-        #(  .SIGN_A(SIGN_A),          
-            .SIGN_B(SIGN_B),                
-            .DATA_WIDTH(DATA_WIDTH),                  
-            .SCLK_DIVIDER(SCLK_DIVIDER), 
-            .SYNC_DURATION(SYNC_DURATION))
-    drvAd56x3_inst
-         (.clk       (csi_clk),
-          .reset     (rsi_reset),
-          .asiValid  (asi_dac_valid),
-          .asiChannel(asi_dac_channel),
-          .asiData   (asi_dac_data),
-          .asiRdy    (asi_dac_ready),
-          .dacSync   (coe_dacSync),
-          .dacSclk   (coe_dacSclk),
-          .dacDin    (coe_dacDin));
-         
+    // avalon ST source
+    output logic                    asoValid,
+    output logic                    asoChannel,
+    output logic [DATA_WIDTH-1 : 0] asoData,
+    input  logic                    asoRdy);   
+    
+	logic unsigned [DATA_WIDTH-1 : 0] cntA;
+	logic unsigned [DATA_WIDTH-1 : 0] cntB;
+    logic channel;
+    
+    logic [$clog2(CE_DIVIDER)-1 : 0] cnt; 
+    
+    always_ff @(posedge clk, posedge reset)
+    if (reset) begin        
+        cntA    <= '0;
+        cntB    <= '0;
+        channel <= 1'b0;
+        cnt     <= '0;
+    end else begin
+        if (cnt == 0) begin
+            if (asoRdy) begin
+                channel <= ~channel;
+                if (channel) begin
+                    cnt  <= 2;
+                    cntA <= cntA + (DATA_WIDTH)'(INCREASE_RATE);
+                    cntB <= cntB - (DATA_WIDTH)'(INCREASE_RATE);
+                end                
+            end
+        end else if (cnt > 0) begin            
+            if (cnt == CE_DIVIDER - 1)
+                cnt <= '0;
+            else
+                cnt <= cnt + 1'd1;
+        end
+    end
+        
+    assign asoValid = asoRdy & (~|cnt);
+    assign asoChannel = channel;
+    assign asoData = channel ? cntB : cntA;
+    
 endmodule
