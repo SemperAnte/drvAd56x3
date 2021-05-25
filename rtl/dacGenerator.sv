@@ -2,24 +2,24 @@
 // Project:       fpga-drivers
 // Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 // History:
-//    19.05.2021 - created
+//    25.05.2021 - created
 //--------------------------------------------------------------------------------
-// top-level wrapper for qsys automatic signal recognition
+// Simple saw generator for DAC AD56x3
+// with Avalon ST interface for testing purpose
 //--------------------------------------------------------------------------------
-module drvAd56x3_hw
+module dacGenerator
    #( parameter SIGN_A = "UNSIGNED",
                 SIGN_B = "UNSIGNED",
-                DATA_WIDTH = 14,    
-                SCLK_DIVIDER = 2,   
-                SYNC_DURATION = 5)    
+                DATA_WIDTH = 14,
+                INCREASE_RATE = 1)    
     (input  logic csi_clk,
      input  logic rsi_reset,
      
-     // avalon ST sink
-     input logic                    asi_dac_valid,
-     input logic                    asi_dac_channel,
-     input logic [DATA_WIDTH-1 : 0] asi_dac_data,
-     output logic                   asi_dac_ready,
+     // avalon ST source
+     input logic                    aso_gen_valid,
+     input logic                    asi_gen_channel,
+     input logic [DATA_WIDTH-1 : 0] asi_gen_data,
+     output logic                   asi_gen_ready);
      
      // conduit to DAC
      output logic coe_dacSync,                                           
