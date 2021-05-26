@@ -19,7 +19,7 @@ package require -exact qsys 16.1
 # module ad56x3_generator
 # 
 set_module_property DESCRIPTION "Simple saw generator for DAC AD56x3 with Avalon ST interface for testing purpose"
-set_module_property NAME ad56x3_generator
+set_module_property NAME dacGenerator
 set_module_property VERSION 1.0
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
@@ -47,21 +47,12 @@ add_fileset_file dacGenerator_hw.sv SYSTEM_VERILOG PATH dacGenerator_hw.sv TOP_L
 # 
 # parameters
 # 
-add_parameter SIGN_A STRING UNSIGNED
-set_parameter_property SIGN_A DEFAULT_VALUE UNSIGNED
-set_parameter_property SIGN_A DISPLAY_NAME SIGN_A
-set_parameter_property SIGN_A TYPE STRING
-set_parameter_property SIGN_A UNITS None
-set_parameter_property SIGN_A HDL_PARAMETER true
-set_parameter_property SIGN_A ALLOWED_RANGES {SIGNED UNSIGNED}
-
-add_parameter SIGN_B STRING UNSIGNED
-set_parameter_property SIGN_B DEFAULT_VALUE UNSIGNED
-set_parameter_property SIGN_B DISPLAY_NAME SIGN_B
-set_parameter_property SIGN_B TYPE STRING
-set_parameter_property SIGN_B UNITS None
-set_parameter_property SIGN_B HDL_PARAMETER true
-set_parameter_property SIGN_B ALLOWED_RANGES {SIGNED UNSIGNED}
+add_parameter CE_DIVIDER INTEGER 1
+set_parameter_property CE_DIVIDER DEFAULT_VALUE 1
+set_parameter_property CE_DIVIDER DISPLAY_NAME CE_DIVIDER
+set_parameter_property CE_DIVIDER TYPE INTEGER
+set_parameter_property CE_DIVIDER UNITS None
+set_parameter_property CE_DIVIDER HDL_PARAMETER true
 
 add_parameter DATA_WIDTH INTEGER 14
 set_parameter_property DATA_WIDTH DEFAULT_VALUE 14
@@ -121,7 +112,7 @@ set_interface_property gen associatedClock clock
 set_interface_property gen associatedReset reset
 set_interface_property gen errorDescriptor ""
 set_interface_property gen firstSymbolInHighOrderBits true
-set_interface_property gen maxChannel 0
+set_interface_property gen maxChannel 1
 set_interface_property gen readyLatency 0
 set_interface_property gen ENABLED true
 set_interface_property gen EXPORT_OF ""

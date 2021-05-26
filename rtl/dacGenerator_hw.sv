@@ -7,8 +7,7 @@
 // top-level wrapper for qsys automatic signal recognition
 //--------------------------------------------------------------------------------
 module dacGenerator_hw
-   #( parameter SIGN_A = "UNSIGNED",
-                SIGN_B = "UNSIGNED",
+   #( parameter CE_DIVIDER = 125,
                 DATA_WIDTH = 14,
                 INCREASE_RATE = 1)    
     (input  logic csi_clk,
@@ -21,11 +20,9 @@ module dacGenerator_hw
      input  logic                    aso_gen_ready);
      
     dacGenerator        
-        #(  .SIGN_A(SIGN_A),          
-            .SIGN_B(SIGN_B),                
-            .DATA_WIDTH(DATA_WIDTH),
-            .INCREASE_RATE(INCREASE_RATE))
-
+        #(.CE_DIVIDER(CE_DIVIDER),                
+          .DATA_WIDTH(DATA_WIDTH),
+          .INCREASE_RATE(INCREASE_RATE))
     dacGenerator_inst
          (.clk       (csi_clk),
           .reset     (rsi_reset),
