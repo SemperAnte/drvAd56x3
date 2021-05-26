@@ -20,8 +20,8 @@ module dacGenerator
     output logic [DATA_WIDTH-1 : 0] asoData,
     input  logic                    asoRdy);   
     
-	logic unsigned [DATA_WIDTH-1 : 0] cntA;
-	logic unsigned [DATA_WIDTH-1 : 0] cntB;
+    logic unsigned [DATA_WIDTH-1 : 0] cntA;
+    logic unsigned [DATA_WIDTH-1 : 0] cntB;
     logic channel;
     
     logic [$clog2(CE_DIVIDER)-1 : 0] cnt; 
@@ -33,24 +33,21 @@ module dacGenerator
         channel <= 1'b0;
         cnt     <= '0;
     end else begin
-        if (cnt == 0) begin
+        if (cnt < CE_DIVIDER - 1) begin
+            cnt <= cnt + 1'd1;
+        end else begin
             if (asoRdy) begin
                 channel <= ~channel;
                 if (channel) begin
-                    cnt  <= 2;
+                    cnt <= 1'd1;
                     cntA <= cntA + (DATA_WIDTH)'(INCREASE_RATE);
                     cntB <= cntB - (DATA_WIDTH)'(INCREASE_RATE);
-                end                
+                end
             end
-        end else if (cnt > 0) begin            
-            if (cnt == CE_DIVIDER - 1)
-                cnt <= '0;
-            else
-                cnt <= cnt + 1'd1;
         end
     end
         
-    assign asoValid = asoRdy & (~|cnt);
+    assign asoValid = asoRdy & (cnt == CE_DIVIDER - 1);
     assign asoChannel = channel;
     assign asoData = channel ? cntB : cntA;
     

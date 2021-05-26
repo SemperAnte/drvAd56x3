@@ -141,16 +141,18 @@ module drvAd56x3
     end else begin        
         if (sclkSync) begin
             if (dacSync) begin // sync      
-                shiftCnt <= '0;
-                if (~channel) begin // wait startData
-                    shiftReg <= shiftAReg;
-                    if (startData)
+                shiftCnt <= '0;                                
+                if (syncCnt == SYNC_DURATION-1) begin
+                    if (~channel) begin
+                        shiftReg <= shiftAReg;
+                        if (startData)
+                            dacSync <= 1'b0;
+                    end else begin
+                        shiftReg <= shiftBReg;
                         dacSync <= 1'b0;
-                end else begin // second channel
-                    shiftReg <= shiftBReg;
+                    end
+                end else begin
                     syncCnt <= syncCnt + 1'd1;
-                    if (syncCnt === SYNC_DURATION-1)                        
-                        dacSync <= 1'b0;                    
                 end
             end else begin // data     
                 syncCnt <= '0;
@@ -164,7 +166,7 @@ module drvAd56x3
         end
     end
     
-    assign asiRdy = dacSync & ~channel & ~startData;
+    assign asiRdy = dacSync & ~channel & ~startData & (syncCnt == SYNC_DURATION - 1);
     assign dacDin = shiftReg[$left(shiftReg)];  
         
 endmodule
