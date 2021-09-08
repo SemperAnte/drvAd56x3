@@ -1,8 +1,6 @@
 //--------------------------------------------------------------------------------
-// Project:       fpga-drivers
-// Author:        Shustov Aleksey ( SemperAnte ), semte@semte.ru
-// History:
-//    20.04.2021 - created
+// Project:       rtllib
+// Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 //--------------------------------------------------------------------------------
 // driver DAC ad5623/ad5643/ad5663, 12/14/16 bits, dual channel
 // see datasheet
@@ -10,163 +8,107 @@
 module drvAd56x3    
    #( parameter SIGN_A = "UNSIGNED", // 0 for UNSIGNED, 1 for SIGNED data format
                 SIGN_B = "UNSIGNED",         
-                DATA_WIDTH = 14,     // width of data                
-                SCLK_DIVIDER = 2,    // divide master clk frequency for dacSclk
+                DATA_WIDTH    = 14,  // width of data                
+                SCLK_DIVIDER  = 2,   // divide master clk frequency for dacSclk
                 SYNC_DURATION = 5)   // dacSync is high between channels in cycles of dacSclk  
-    (input logic clk,   // 25MHz on SOM-CV-SE-A6D-C3C-7I 
-     input logic reset,
+    (input logic                     clk,   // 25MHz on SOM-CV-SE-A6D-C3C-7I 
+     input logic                     reset,
      
-     // avalon ST sink
-     input logic                    asiValid,    // sampling frequency of dac output
-     input logic                    asiChannel,  // 0 - for channel A, 1 - for channel B
-     input logic [DATA_WIDTH-1 : 0] asiData,
-     output logic                   asiRdy,
+     // avalon MM slave
+     input  logic            [2 : 0] avsAdr,
+     input  logic                    avsWr,
+     input  logic           [15 : 0] avsWrData,
+     input  logic                    avsRd,
+     output logic           [15 : 0] avsRdData,
+     
+     // avalon ST sink - channel 0, must be sync to channel 1
+     input  logic                    asiValid0,      // sampling frequency of dac output
+     input  logic [DATA_WIDTH-1 : 0] asiData0,
+     output logic                    asiRdy0,    
+     
+     // avalon ST sink - channel 1
+     input  logic                    asiValid1,
+     input  logic [DATA_WIDTH-1 : 0] asiData1,
+     output logic                    asiRdy1, 
      
      // conduit to DAC
-     output logic dacSync,                  // when sync is low begins write sequence
-                                            // sync must be high for min 15 ns between transactions
-     output logic dacSclk,                  // dac receives di on falling edge of sclk                                            
-                                            // max 50 MHz
-     output logic dacDin);                  // 24 bits
+     output logic                    dacSync,        // when sync is low begins write sequence
+                                                     // sync must be high for min 15 ns between transactions
+     output logic                    dacSclk,        // dac receives di on falling edge of sclk                                            
+                                                     // max 50 MHz
+     output logic                    dacDin);        // 24 bits     
     
-    localparam logic [2 : 0] COMMAND_WORD_A = 3'b000; // datasheet table 8-9
-    localparam logic [2 : 0] COMMAND_WORD_B = 3'b010;
-    localparam logic [2 : 0] ADDRESS_WORD_A = 3'b000;
-    localparam logic [2 : 0] ADDRESS_WORD_B = 3'b001;
+    // for generator control
+    logic          genSel;
+    logic [15 : 0] ceDivider;
+    logic [15 : 0] incrRate0;
+    logic [15 : 0] incrRate1;    
+    // generator interconnection
+    logic                           genValid0, genValid1;
+    logic signed [DATA_WIDTH-1 : 0] genData0, genData1;
+    logic                           genRdy0, genRdy1;
+    // core interconnection
+    logic                           coreValid0, coreValid1;
+    logic signed [DATA_WIDTH-1 : 0] coreData0, coreData1;
+    logic                           coreRdy0, coreRdy1;
     
-    localparam XOR_A = (SIGN_A == "SIGNED") ? 1'b1 : 1'b0;
-    localparam XOR_B = (SIGN_B == "SIGNED") ? 1'b1 : 1'b0;
+    drvAd56x3_parm
+    drvAd56x3_parmInst
+         (.clk      (clk      ),
+          .reset    (reset    ),
+          .avsAdr   (avsAdr   ),
+          .avsWr    (avsWr    ),
+          .avsWrData(avsWrData),
+          .avsRd    (avsRd    ),
+          .avsRdData(avsRdData),
+          .genSel   (genSel   ),
+          .ceDivider(ceDivider),
+          .incrRate0(incrRate0),
+          .incrRate1(incrRate1));
     
-    localparam SHIFT_WIDTH = 24;
-    logic [SHIFT_WIDTH-1 : 0] shiftReg, shiftAReg, shiftBReg; // shift = {2'bxx, commandWord, addressWord, data, '0}    
-    logic [$clog2(SHIFT_WIDTH)-1 : 0] shiftCnt; // counter 0-24
+    drvAd56x3_gen
+        #(.DATA_WIDTH(DATA_WIDTH))
+    drvAd56x3_genInst
+         (.clk      (clk      ),
+          .reset    (reset    ),
+          .ceDivider(ceDivider),
+          .incrRate0(incrRate0),
+          .incrRate1(incrRate1),
+          .genValid0(genValid0),
+          .genData0 (genData0 ),
+          .genRdy0  (genRdy0  ),
+          .genValid1(genValid1),
+          .genData1 (genData1 ),
+          .genRdy1  (genRdy1  ));
     
-    logic [$clog2(SYNC_DURATION)-1 : 0] syncCnt; // count sync high duration
+    drvAd56x3_core
+       #(.SIGN_A       (SIGN_A       ),          
+         .SIGN_B       (SIGN_B       ),                
+         .DATA_WIDTH   (DATA_WIDTH   ),                  
+         .SCLK_DIVIDER (SCLK_DIVIDER ), 
+         .SYNC_DURATION(SYNC_DURATION))
+    drvAd56x3_coreInst
+        (.clk       (clk       ),
+         .reset     (reset     ),
+         .coreValid0(coreValid0),
+         .coreData0 (coreData0 ),
+         .coreRdy0  (coreRdy0  ),
+         .coreValid1(coreValid1),
+         .coreData1 (coreData1 ),
+         .coreRdy1  (coreRdy1  ),
+         .dacSync   (dacSync   ),
+         .dacSclk   (dacSclk   ),
+         .dacDin    (dacDin    ));
+         
+    assign coreValid0 = (genSel) ? genValid0 : asiValid0;
+    assign coreData0  = (genSel) ? genData0  : asiData0;
+    assign coreValid1 = (genSel) ? genValid1 : asiValid1;
+    assign coreData1  = (genSel) ? genData1  : asiData1;
     
-    logic startData;
-    logic channel;  // A = 0, B = 1     
-    logic [DATA_WIDTH-1 : 0] dataAReg, dataBReg; // latch data on ce   
-    logic dataASet, dataBSet;
+    assign genRdy0 = genSel & coreRdy0;
+    assign genRdy1 = genSel & coreRdy1;
     
-    // sclk
-    logic sclkSync;
-    generate    
-        if (SCLK_DIVIDER == 1) begin
-            assign sclkSync = 1'b1;
-            assign dacSclk = clk;
-            
-        end else if (SCLK_DIVIDER == 2) begin
-            always_ff @(posedge clk, posedge reset)
-            if (reset)
-                sclkSync <= 1'b0;
-            else 
-                sclkSync <= ~sclkSync;            
-            assign dacSclk = ~sclkSync;
-            
-        end else begin // > 2
-            initial begin
-                if ((SCLK_DIVIDER % 2) != 0) begin // must be even         
-                    $error("SCLK_DIVIDER must be even.");
-                    $stop;
-                end
-            end
-        
-            logic [$clog2(SCLK_DIVIDER)-1 : 0] sclkCnt;
-            always_ff @(posedge clk, posedge reset)
-            if (reset) begin
-                sclkCnt <= '0;
-            end else begin
-                if (sclkCnt == SCLK_DIVIDER-1)
-                    sclkCnt <= '0;                    
-                else
-                    sclkCnt <= sclkCnt + 1;                                                        
-            end
-            assign sclkSync = (sclkCnt == SCLK_DIVIDER - 1) ? 1'b1 : 1'b0; 
-            assign dacSclk = (sclkCnt <= SCLK_DIVIDER/2 - 1) ? 1'b1 : 1'b0;
-            
-        end
-    endgenerate       
-    
-    // latch inputs on ce
-    always_ff @(posedge clk, posedge reset)
-    if (reset) begin
-        dataAReg  <= '0;
-        dataBReg  <= '0;
-        dataASet  <= 1'b0;
-        dataBSet  <= 1'b0;
-        startData <= 1'b0;
-    end else begin
-        if (asiValid & asiRdy) begin
-            if (~asiChannel) begin
-                dataAReg <= asiData;
-                dataASet <= 1'b1;
-                if (dataBSet)
-                    startData <= 1'b1;
-            end else begin
-                dataBReg <= asiData;
-                dataBSet <= 1'b1;
-                if (dataASet)
-                    startData <= 1'b1;
-            end            
-        end else if (sclkSync) begin
-            dataASet  <= 1'b0;
-            dataBSet  <= 1'b0;
-            startData <= 1'b0;
-        end
-    end
-    
-    always_comb
-    begin
-        shiftAReg <= {2'b00, // don't care
-                      COMMAND_WORD_A,
-                      ADDRESS_WORD_A,
-                      XOR_A ^ dataAReg[$left(dataAReg)],
-                      dataAReg[$left(dataAReg)-1 : 0],
-                      {16 - DATA_WIDTH{1'b0}}};
-        shiftBReg <= {2'b00,
-                      COMMAND_WORD_B,
-                      ADDRESS_WORD_B,
-                      XOR_B ^ dataBReg[$left(dataBReg)],
-                      dataBReg[$left(dataBReg)-1 : 0],
-                      {16 - DATA_WIDTH{1'b0}}};
-    end       
-    
-    always_ff @(posedge clk, posedge reset)
-    if (reset) begin
-        shiftCnt <= '0;
-        dacSync <= 1'b1;
-        syncCnt <= '0;
-        channel <= 1'b0;
-        shiftReg <= '0;        
-    end else begin        
-        if (sclkSync) begin
-            if (dacSync) begin // sync      
-                shiftCnt <= '0;                                
-                if (syncCnt == SYNC_DURATION-1) begin
-                    if (~channel) begin
-                        shiftReg <= shiftAReg;
-                        if (startData)
-                            dacSync <= 1'b0;
-                    end else begin
-                        shiftReg <= shiftBReg;
-                        dacSync <= 1'b0;
-                    end
-                end else begin
-                    syncCnt <= syncCnt + 1'd1;
-                end
-            end else begin // data     
-                syncCnt <= '0;
-                shiftReg <= shiftReg << 1;
-                shiftCnt <= shiftCnt + 1'd1;
-                if (shiftCnt == SHIFT_WIDTH-1) begin                    
-                    channel <= ~channel;   
-                    dacSync <= 1'b1;
-                end
-            end            
-        end
-    end
-    
-    assign asiRdy = dacSync & ~channel & ~startData & (syncCnt == SYNC_DURATION - 1);
-    assign dacDin = shiftReg[$left(shiftReg)];  
-        
+    assign asiRdy0 = ~genSel & coreRdy0;
+    assign asiRdy1 = ~genSel & coreRdy1;
+
 endmodule

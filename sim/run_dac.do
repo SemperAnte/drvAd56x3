@@ -5,10 +5,13 @@ if {[file exists rtl_work]} {
 vlib rtl_work
 vmap work rtl_work
 
+vlog     -work work {../rtl/drvAd56x3_parm.sv}
+vlog     -work work {../rtl/drvAd56x3_core.sv}
+vlog     -work work {../rtl/drvAd56x3_gen.sv}
 vlog     -work work {../rtl/drvAd56x3.sv}
-vlog     -work work {tb_drvAd56x3.sv}
+vlog     -work work {tb_dac.sv}
 
-vsim -t 1ns -L work -voptargs="+acc" tb_drvAd56x3
+vsim -t 1ns -L work -voptargs="+acc" tb_dac
 
 add wave *
 

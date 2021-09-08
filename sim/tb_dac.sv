@@ -1,14 +1,12 @@
 //--------------------------------------------------------------------------------
-// Project:       fpga-drivers
+// Project:       rtllib
 // Author:        Shustov Aleksey ( SemperAnte ), semte@semte.ru
-// History:
-//    20.04.2021 - created
 //--------------------------------------------------------------------------------
 // testbench driver DAC ad56x3
 //--------------------------------------------------------------------------------
 `timescale 1 ns / 100 ps
 
-module tb_drvAd56x3();
+module tb_dac();
      
     localparam SIGN_A = "UNSIGNED";
     localparam SIGN_B = "SIGNED";
@@ -27,11 +25,21 @@ module tb_drvAd56x3();
     
     logic clk;
     logic reset;
+    
+    // avalon MM slave
+    logic  [2 : 0] avsAdr = '0;
+    logic          avsWr = 1'b0;
+    logic [15 : 0] avsWrData = '0;
+    logic          avsRd = 1'b0;
+    logic [15 : 0] avsRdData;
    
-    logic                    asiValid;
-    logic                    asiChannel;
-    logic [DATA_WIDTH-1 : 0] asiData;
-    logic                    asiRdy;
+    logic                    asiValid0;
+    logic [DATA_WIDTH-1 : 0] asiData0;
+    logic                    asiRdy0;
+    
+    logic                    asiValid1;
+    logic [DATA_WIDTH-1 : 0] asiData1;
+    logic                    asiRdy1;
     
     logic dacSync;
     logic dacSclk;
@@ -44,15 +52,22 @@ module tb_drvAd56x3();
       .SCLK_DIVIDER(SCLK_DIVIDER),
       .SYNC_DURATION(SYNC_DURATION))
     uut
-      (.clk       (clk),
-       .reset     (reset),
-       .asiValid  (asiValid),
-       .asiChannel(asiChannel),
-       .asiData   (asiData),
-       .asiRdy    (asiRdy),
-       .dacSync   (dacSync),
-       .dacSclk   (dacSclk),
-       .dacDin    (dacDin));
+      (.clk      (clk      ),
+       .reset    (reset    ),
+       .avsAdr   (avsAdr   ),
+       .avsWr    (avsWr    ),
+       .avsWrData(avsWrData),
+       .avsRd    (avsRd    ),
+       .avsRdData(avsRdData),
+       .asiValid0(asiValid0),
+       .asiData0 (asiData0 ),
+       .asiRdy0  (asiRdy0  ),
+       .asiValid1(asiValid1),
+       .asiData1 (asiData1 ),
+       .asiRdy1  (asiRdy1  ),
+       .dacSync  (dacSync  ),
+       .dacSclk  (dacSclk  ),
+       .dacDin   (dacDin   ));
     
     // clk
     always begin   
@@ -76,51 +91,56 @@ module tb_drvAd56x3();
     logic [SHIFT_WIDTH-1 : 0] actualA, actualB;
     logic [SHIFT_WIDTH-1 : 0] expectedA, expectedB;   
     
-    enum int unsigned {ST_RDY, ST_A, ST_B} state;
+    enum int unsigned {ST_RDY, ST_WAIT} state;
     
     // input random data
-    always_ff @(posedge clk, posedge reset)
-    if (reset) begin
-        asiValid   <= 1'b0;
-        asiChannel <= 1'b0;
-        asiData    <= 'x;
-        state      <= ST_RDY;
-    end else begin
-        // default
-        asiValid   <= 1'b0;
-        asiChannel <= 1'b0;
-        asiData    <= 'x;
-        case (state)
-            ST_RDY: begin                
-                if (asiRdy) begin
-                    asiValid   <= 1'b1;
-                    asiChannel <= 1'b0;                    
-                    asiData <= $urandom();
-                    state   <= ST_A;
-                end                    
-            end
-            ST_A: begin                
-                asiValid   <= 1'b1;
-                asiChannel <= 1'b1;
-                asiData    <= $urandom();
-                expectedA  <= {2'b00,
-                               uut.COMMAND_WORD_A,
-                               uut.ADDRESS_WORD_A,
-                               XOR_A ^ asiData[$left(asiData)],
-                               asiData[$left(asiData)-1 : 0],
-                               {16 - DATA_WIDTH{1'b0}}};  
-                state      <= ST_B;
-            end
-            ST_B: begin
-                expectedB = {2'b00,
-                             uut.COMMAND_WORD_B,
-                             uut.ADDRESS_WORD_B,
-                             XOR_B ^ asiData[$left(asiData)],
-                             asiData[$left(asiData)-1 : 0],
-                             {16 - DATA_WIDTH{1'b0}}};  
-                state <= ST_RDY;
-            end
-        endcase        
+    always_ff @(posedge clk, posedge reset) begin
+        logic [DATA_WIDTH-1 : 0] dataA, dataB;
+        
+        if (reset) begin
+            asiValid0  <= 1'b0;
+            asiData0   <= 'x;
+            asiValid1  <= 1'b0;
+            asiData1   <= 'x;
+            state      <= ST_RDY;
+        end else begin
+            // default
+            asiValid0  <= 1'b0;        
+            asiData0   <= 'x;
+            asiValid1  <= 1'b0;        
+            asiData1   <= 'x;       
+            case (state)
+                ST_RDY: begin                
+                    if (asiRdy0 & asiRdy1) begin
+                        asiValid0 <= 1'b1;    
+                        dataA     = $urandom();
+                        asiData0  <= dataA;
+                        expectedA  <= {2'b00,
+                                       uut.drvAd56x3_coreInst.COMMAND_WORD_A,
+                                       uut.drvAd56x3_coreInst.ADDRESS_WORD_A,
+                                       XOR_A ^ dataA[$left(dataA)],
+                                       dataA[$left(dataA)-1 : 0],
+                                       {16 - DATA_WIDTH{1'b0}}}; 
+                        
+                        asiValid1 <= 1'b1;
+                        dataB      = $urandom();
+                        asiData1  <= dataB;
+                        expectedB = {2'b00,
+                                     uut.drvAd56x3_coreInst.COMMAND_WORD_B,
+                                     uut.drvAd56x3_coreInst.ADDRESS_WORD_B,
+                                     XOR_B ^ dataB[$left(dataB)],
+                                     dataB[$left(dataB)-1 : 0],
+                                     {16 - DATA_WIDTH{1'b0}}};  
+                        state     <= ST_WAIT;
+                    end                    
+                end
+                ST_WAIT: begin                
+                    if (asiRdy0) begin
+                        state <= ST_RDY;
+                    end
+                end
+            endcase        
+        end
     end
     
     // extract data from dacDin
