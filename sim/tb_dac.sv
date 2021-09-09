@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------
 // Project:       rtllib
-// Author:        Shustov Aleksey ( SemperAnte ), semte@semte.ru
+// Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 //--------------------------------------------------------------------------------
 // testbench driver DAC ad56x3
 //--------------------------------------------------------------------------------
@@ -98,34 +98,34 @@ module tb_dac();
         logic [DATA_WIDTH-1 : 0] dataA, dataB;
         
         if (reset) begin
-            asiValid0  <= 1'b0;
-            asiData0   <= 'x;
-            asiValid1  <= 1'b0;
-            asiData1   <= 'x;
-            state      <= ST_RDY;
+            asiValid0 <= 1'b0;
+            asiData0  <= 'x;
+            asiValid1 <= 1'b0;
+            asiData1  <= 'x;
+            state     <= ST_RDY;
         end else begin
             // default
-            asiValid0  <= 1'b0;        
-            asiData0   <= 'x;
-            asiValid1  <= 1'b0;        
-            asiData1   <= 'x;       
+            asiValid0 <= 1'b0;        
+            asiData0  <= 'x;
+            asiValid1 <= 1'b0;        
+            asiData1  <= 'x;       
             case (state)
                 ST_RDY: begin                
                     if (asiRdy0 & asiRdy1) begin
                         asiValid0 <= 1'b1;    
                         dataA     = $urandom();
                         asiData0  <= dataA;
-                        expectedA  <= {2'b00,
-                                       uut.drvAd56x3_coreInst.COMMAND_WORD_A,
-                                       uut.drvAd56x3_coreInst.ADDRESS_WORD_A,
-                                       XOR_A ^ dataA[$left(dataA)],
-                                       dataA[$left(dataA)-1 : 0],
-                                       {16 - DATA_WIDTH{1'b0}}}; 
+                        expectedA <= {2'b00,
+                                      uut.drvAd56x3_coreInst.COMMAND_WORD_A,
+                                      uut.drvAd56x3_coreInst.ADDRESS_WORD_A,
+                                      XOR_A ^ dataA[$left(dataA)],
+                                      dataA[$left(dataA)-1 : 0],
+                                      {16 - DATA_WIDTH{1'b0}}}; 
                         
                         asiValid1 <= 1'b1;
                         dataB      = $urandom();
                         asiData1  <= dataB;
-                        expectedB = {2'b00,
+                        expectedB <= {2'b00,
                                      uut.drvAd56x3_coreInst.COMMAND_WORD_B,
                                      uut.drvAd56x3_coreInst.ADDRESS_WORD_B,
                                      XOR_B ^ dataB[$left(dataB)],

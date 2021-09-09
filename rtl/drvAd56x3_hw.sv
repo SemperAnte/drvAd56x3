@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------
-// Project:       fpga-drivers
+// Project:       rtllib
 // Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 //--------------------------------------------------------------------------------
 // top-level wrapper for qsys automatic signal recognition
@@ -8,8 +8,8 @@
 module drvAd56x3_hw
    #( parameter SIGN_A = "UNSIGNED",
                 SIGN_B = "UNSIGNED",
-                DATA_WIDTH = 14,    
-                SCLK_DIVIDER = 2,   
+                DATA_WIDTH    = 14,    
+                SCLK_DIVIDER  = 2,   
                 SYNC_DURATION = 5)    
     (input  logic                   csi_clk,
      input  logic                   rsi_reset,
@@ -37,10 +37,10 @@ module drvAd56x3_hw
      output logic                   coe_dacDin);
      
     drvAd56x3        
-       #(.SIGN_A       (SIGN_A),          
-         .SIGN_B       (SIGN_B),                
-         .DATA_WIDTH   (DATA_WIDTH),                  
-         .SCLK_DIVIDER (SCLK_DIVIDER), 
+       #(.SIGN_A       (SIGN_A       ),          
+         .SIGN_B       (SIGN_B       ),                
+         .DATA_WIDTH   (DATA_WIDTH   ),                  
+         .SCLK_DIVIDER (SCLK_DIVIDER ), 
          .SYNC_DURATION(SYNC_DURATION))
     drvAd56x3_inst
          (.clk      (csi_clk          ),

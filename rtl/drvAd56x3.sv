@@ -6,7 +6,7 @@
 // see datasheet
 //--------------------------------------------------------------------------------
 module drvAd56x3    
-   #( parameter SIGN_A = "UNSIGNED", // 0 for UNSIGNED, 1 for SIGNED data format
+   #( parameter SIGN_A = "UNSIGNED", // "UNSIGNED" or "SIGNED" data format
                 SIGN_B = "UNSIGNED",         
                 DATA_WIDTH    = 14,  // width of data                
                 SCLK_DIVIDER  = 2,   // divide master clk frequency for dacSclk
@@ -40,6 +40,7 @@ module drvAd56x3
     
     // for generator control
     logic          genSel;
+    logic          chSwap; // swap channels
     logic [15 : 0] ceDivider;
     logic [15 : 0] incrRate0;
     logic [15 : 0] incrRate1;    
@@ -47,6 +48,10 @@ module drvAd56x3
     logic                           genValid0, genValid1;
     logic signed [DATA_WIDTH-1 : 0] genData0, genData1;
     logic                           genRdy0, genRdy1;
+    // channelc interconnection
+    logic                           chValid0, chValid1;
+    logic signed [DATA_WIDTH-1 : 0] chData0, chData1;
+    logic                           chRdy0, chRdy1;    
     // core interconnection
     logic                           coreValid0, coreValid1;
     logic signed [DATA_WIDTH-1 : 0] coreData0, coreData1;
@@ -62,6 +67,7 @@ module drvAd56x3
           .avsRd    (avsRd    ),
           .avsRdData(avsRdData),
           .genSel   (genSel   ),
+          .chSwap   (chSwap   ),
           .ceDivider(ceDivider),
           .incrRate0(incrRate0),
           .incrRate1(incrRate1));
@@ -99,16 +105,25 @@ module drvAd56x3
          .dacSync   (dacSync   ),
          .dacSclk   (dacSclk   ),
          .dacDin    (dacDin    ));
-         
-    assign coreValid0 = (genSel) ? genValid0 : asiValid0;
-    assign coreData0  = (genSel) ? genData0  : asiData0;
-    assign coreValid1 = (genSel) ? genValid1 : asiValid1;
-    assign coreData1  = (genSel) ? genData1  : asiData1;
     
-    assign genRdy0 = genSel & coreRdy0;
-    assign genRdy1 = genSel & coreRdy1;
+    // select asi or generator
+    assign chValid0 = (genSel) ? genValid0 : asiValid0;
+    assign chData0  = (genSel) ? genData0  : asiData0;
+    assign chValid1 = (genSel) ? genValid1 : asiValid1;
+    assign chData1  = (genSel) ? genData1  : asiData1;    
+    // swap channels - asi or generator
+    assign coreValid0 = (chSwap) ? chValid1 : chValid0;
+    assign coreData0  = (chSwap) ? chData1  : chData0;
+    assign coreValid1 = (chSwap) ? chValid0 : chValid1;
+    assign coreData1  = (chSwap) ? chData0  : chData1;
     
-    assign asiRdy0 = ~genSel & coreRdy0;
-    assign asiRdy1 = ~genSel & coreRdy1;
+    // swap channels - rdy signals
+    assign chRdy0 = (chSwap) ? coreRdy1 : coreRdy0;    
+    assign chRdy1 = (chSwap) ? coreRdy0 : coreRdy1;
+    // select asi or generator, set null to non-active
+    assign genRdy0 = genSel & chRdy0;
+    assign genRdy1 = genSel & chRdy1;    
+    assign asiRdy0 = ~genSel & chRdy0;
+    assign asiRdy1 = ~genSel & chRdy1;
 
 endmodule

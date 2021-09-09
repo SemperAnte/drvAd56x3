@@ -1,8 +1,6 @@
 //--------------------------------------------------------------------------------
-// Project:       fpga-drivers
-// Author:        Shustov Aleksey ( SemperAnte ), semte@semte.ru
-// History:
-//    25.06.2021 - created
+// Project:       rtllib
+// Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 //--------------------------------------------------------------------------------
 // testbench for DAC generator and DAC driver connected with Avalon interface
 //--------------------------------------------------------------------------------
@@ -105,18 +103,24 @@ module tb_gen();
         val = avsRdData;
     endtask
     
-  initial
-    begin
+    initial begin
         static int adr = 0;
-        logic [15 : 0] tbRdData;
+        logic signed [15 : 0] tbRdData;
     
         @(negedge reset);
         #(10 * T_CLK);        
         avsWrite(0, 1'b1);
         avsWrite(1, 1'b1);
-        avsWrite(2, 200);
-        avsWrite(3, 2);
-        avsWrite(4, -2);
+        avsWrite(2, 1'b1);        
+        avsWrite(3, 200);
+        avsWrite(4, 2);
+        avsWrite(5, -2);
+        avsRead(3, tbRdData);
+        assert (tbRdData == 200) else $error("Not correct read data.");
+        avsRead(4, tbRdData);
+        assert (tbRdData == 2) else $error("Not correct read data.");
+        avsRead(5, tbRdData);
+        assert (tbRdData == -2) else $error("Not correct read data.");
         
     end
    
