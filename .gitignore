@@ -1,5 +1,6 @@
 *
 !*/
+!submodules/*
 !.gitignore
 !*.tcl/
 !README.md
@@ -36,6 +37,8 @@ rtl
 !rtl/**/*.v
 !rtl/**/*.vh
 !rtl/**/*.vhd
+
+!python/**/*.py
 
 sim
 !sim/
