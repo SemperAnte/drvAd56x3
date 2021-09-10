@@ -3,6 +3,7 @@
 // Author:        Shustov Aleksey (SemperAnte), semte@semte.ru
 //--------------------------------------------------------------------------------
 // testbench driver DAC ad56x3
+// with auto resul checking
 //--------------------------------------------------------------------------------
 `timescale 1 ns / 100 ps
 
