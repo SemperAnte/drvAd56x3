@@ -10,6 +10,7 @@ DESCRIPTION:
 """
 from device import Device
 from enum import IntEnum
+import numpy as np
 
 # Варианты сигналов выводимых на ЦАП
 class DacSource(IntEnum):
@@ -69,4 +70,4 @@ class Ad56x3(Device):
         return self.read_16(self.REG_FSDIV) 
 
     def getDeltas(self):       
-        return (self.read_16(self.REG_DELTA0), self.read_16(self.REG_DELTA1)) 
+        return (np.int16(self.read_16(self.REG_DELTA0)), np.int16(self.read_16(self.REG_DELTA1)) 
