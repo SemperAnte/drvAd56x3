@@ -1,22 +1,22 @@
-# Драйвер ЦАП ad5623/ad5643/ad5663
+# DAC driver ad5623/ad5643/ad5663
 
-Модуль драйвера ЦАП указанного семейства со встроенным подключаемым генератором пилообразного сигнала для настройки в железе.  
-Имеет два независимых канала данных с интерфейсом подключения Avalon Streaming.  
-Управление осуществляется через интерфейс Avalon MM:  
-- смена каналов
-- включение встроенного генератора
-- настройка сигнала генератора
+It's a module of DAC driver for specified family with built-in saw-signal generator for hardware testing.  
+The module has 2 independent data channels with Avalon Streaming interface.  
+The module is controlled via Avalon MM interface:  
+- channel swapping
+- turn on/off built-in generator
+- set parameters for generator
 
-Дополнительно репозиторий содержит Qsys компонент и тестбенч для Modelsim.
+Also this repository has Qsys component and testbench for Modelsim.
 
-Для записи и чтения в управляющие регистры используется интерфейс Avalon MM
-с разрядностью адреса 3 бита и разрядностью данных 16 бит.
-### Таблица управляющих регистров
-|Адрес|Биты    |Чтение/запись|Описание                                                                   |
-|-----|--------|-------------|---------------------------------------------------------------------------|
-|0    |0       |w            |Сброс всех регистров в значения по-умолчанию                               |
-|1    |0       |w/r          |0 - данные на ЦАП с внешнего интерфейса, 1 - данные с генератора           |
-|2    |0       |w/r          |0 - стандартное расположение каналов, 1 - переключение каналов             |
-|3    |[15:0]  |w/r          |Установка делителя частоты для генератора (влияет на частоту дискретизации)|
-|4    |[15:0]  |w/r          |Значение приращения (знаковое число) для генератора, канал 0               |
-|5    |[15:0]  |w/r          |Значение приращения (знаковое число) для генератора, канал 1               |
+Interface Avalon MM with address width 3 bits and data width 16 bits is used for writing and reading to controlling registers.
+
+### Control registers table
+|Address|Bits    |Write/read   |Description                                                            |
+|-------|--------|-------------|-----------------------------------------------------------------------|
+|0      |0       |w            |Reset all registers to default state                                   |
+|1      |0       |w/r          |0 - DAC data from external interface, 1 - DAC data from  generator     |
+|2      |0       |w/r          |0 - standart channel position, 1 - channel swapping                    |
+|3      |[15:0]  |w/r          |Set clock divider for generator (for sampling frequency setting)       |                                                                                           
+|4      |[15:0]  |w/r          |Increasing rate for generator (signed number), channel 0               |
+|5      |[15:0]  |w/r          |Increasing rate for generator (signed number), channel 1               |
